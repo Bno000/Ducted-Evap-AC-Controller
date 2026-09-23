@@ -1,0 +1,27 @@
+This is the Analog 4 wire Control Protocol spec and the pinout
+The original controllers are based on a Tekelek Tek700 controller
+And the full spec is available in the PDF in the 
+The back of the controller uses a 5 pin Molex plug.
+
+Pins from 1-5
+
+Voltage is 6V DC
+
+1 - Gnd
+2 - Pump On/Off
+3 - Fan Speed Variable
+4 - GND
+5 - NC
+
+Pins 1 and 4 provide enough power to run an ESP32 + touch screen and 2 10k digital pots for the control
+
+Pump Control
+Pulled high for OFF (above 3.5v)
+Pulled under 3V for ON (2V is what the original controller provides)
+
+Fan control
+Pulled HIGH for OFF (Above 3.5v) I pulled up to 5v for off
+Fan speed highest = 1.0v
+Fan speed slowest = 3.0v 
+The original controller has 10 fan speeds, not crucial but its good to measure the voltage on the fan pin at all levels in case you need to tweak the voltages.
+
