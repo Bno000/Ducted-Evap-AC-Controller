@@ -11,3 +11,6 @@ My unit is analog so I did not do any reverse engineering on the digital side wh
 
 Unit uses a 5 pin Molex connector to connect the touch panel and the goal of this project was to replace the old controller with a newer ESP32 based LCD touch screen.
 
+This will work with any Evaporative swamp cooler that is based on the Tekelek Tek7, Tek600 and Tec 400 series control boxes.
+
+My unit was a Seely International Braemar unit. 
