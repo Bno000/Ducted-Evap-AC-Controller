@@ -1,0 +1,122 @@
+My goal was to build an ESPHome based drop in replacement controller.
+
+I built 2 controllers. A dummy controller with no interface (all controlled via ESPHome) and a Touch Screen based on a 7" ESP32 touch screen.
+
+The analog control is handled by a pair of X9C 10k digital potentiometers which seemed to be the simplest way to go about this.
+
+I ended up using 3 switches (and hid the pump switch from the UI) Didn't bother with a thermostat card because that isn't how a swamp cooler really is designed to work.
+
+So,
+My 3 switches are
+1 - Ducted AC (Main control)
+2 - Cooling Mode (pump control)
+3 - Pump (Hidden from the UI, Does stuff based on switches 1 and 2)
+
+
+
+# ESPHome Examples
+
+# Completely Optional but added a DHT11 Temp Humidity Sensor
+sensor:
+  - platform: dht
+    pin: GPIO14
+    temperature:
+      name: "House Temperature"
+      id: AC_Therm
+    humidity:
+      name: "House Humidity"
+    update_interval: 60s
+
+
+
+# Digital Potentiometers
+#I X9c for the Pump. I could probably have done this with a divider but the X9C is cheap enough
+output:
+  - platform: x9c
+    id: Pump_gpio
+    cs_pin: GPIO5
+    ud_pin: GPIO0
+    inc_pin: GPIO4
+    inverted: True
+    ### EVAP PUMP Values
+#    min_power: 1
+    max_power: 0.50
+
+# Fan Speed control. Logic inverted here so pulling the X9C High will turn the fan off
+  - platform: x9c
+    id: Fan_gpio
+    cs_pin: GPIO15
+    ud_pin: GPIO12
+    inc_pin: GPIO13
+    inverted: True
+    ### Evap AC FAN Values
+    # I had to tweak these to best match the voltages my original controller was providing. Min and Max voltage were suficient.
+    min_power: 0.20
+    max_power: 0.79
+
+# Fan control 
+fan:
+  - platform: speed
+    name: "Ducted Air Conditioning"
+    output: Fan_gpio
+    speed_count: 10
+    id: fan_Ducted
+    on_turn_on: 
+      then:
+        - if:
+            condition:
+              - lambda: 'return id(cooling_mode).state;'
+            then:
+              - switch.turn_on: Pump_out
+
+    on_turn_off: 
+      then:
+        - switch.turn_off: Pump_out
+
+switch:
+# The actual pump switch hidden from the UI.
+  - platform: output
+    output: Pump_gpio
+    id: Pump_out
+
+# Cooling mode switch, Doesn't actually do anything if the fan is off.
+  - platform: template
+    id: cooling_mode
+    name: "Cooling"
+    optimistic: True
+    on_turn_off: 
+      then:
+        - switch.turn_off: Pump_out
+    on_turn_on: 
+      then:
+        - if:
+            condition:
+              - lambda: 'return id(fan_Ducted).state;'
+            then:
+              - switch.turn_on: Pump_out
+
+# Example thermostat config, I wasn't a huge fan of this because a swamp cooler can't really control the temp like an evap can
+climate:
+  - platform: thermostat
+    id: swamp_cooler
+    name: "Swamp Cooler"
+    min_idle_time: 
+      seconds: 30
+    min_cooling_off_time: 
+      seconds: 30
+    min_cooling_run_time: 
+      minutes: 5
+    min_fanning_off_time: 
+      seconds: 30
+    min_fanning_run_time: 
+      minutes: 5
+    sensor: AC_Therm  # Temperature sensor
+    cool_action:
+      - switch.turn_on: Pump_out
+      - fan.turn_on: fan_Ducted
+    fan_only_action:
+      - switch.turn_off: Pump_out  # Ensure pump is off in fan-only mode
+      - fan.turn_on: fan_Ducted
+    idle_action:
+      - switch.turn_off: Pump_out
+      - fan.turn_off: fan_Ducted
